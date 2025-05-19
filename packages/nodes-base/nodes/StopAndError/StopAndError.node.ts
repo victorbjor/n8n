@@ -91,12 +91,12 @@ export class StopAndError implements INodeType {
 			const json = this.getNodeParameter('errorObject', 0) as string;
 
 			const errorObject = jsonParse<JsonObject>(json);
-
-			toThrow = {
-				name: 'User-thrown error',
-				message: `Workflow ID ${workflowId} "${workflowName}" has failed`,
-				...errorObject,
-			};
+			toThrow = JSON.stringify(errorObject);
+			// toThrow = {
+			// 	name: 'User-thrown error',
+			// 	message: `Workflow ID ${workflowId} "${workflowName}" has failed`,
+			// 	...errorObject,
+			// };
 		}
 
 		throw new NodeOperationError(this.getNode(), toThrow);
