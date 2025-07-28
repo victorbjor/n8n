@@ -44,6 +44,7 @@ import type {
 	ITaskStartedData,
 	AiAgentRequest,
 	IWorkflowExecutionDataProcess,
+	Foo,
 } from 'n8n-workflow';
 import {
 	LoggerProxy as Logger,
@@ -1099,7 +1100,8 @@ export class WorkflowExecute {
 		additionalData: IWorkflowExecuteAdditionalData,
 		mode: WorkflowExecuteMode,
 		abortSignal?: AbortSignal,
-	): Promise<IRunNodeResponse> {
+	): Promise<IRunNodeResponse | Foo> {
+		debugger;
 		const { node } = executionData;
 		let inputData = executionData.data;
 
@@ -1201,7 +1203,7 @@ export class WorkflowExecute {
 				abortSignal,
 			);
 
-			let data;
+			let data: INodeExecutionData[][] | Foo | null;
 
 			if (customOperation) {
 				data = await customOperation.call(context);
@@ -1210,6 +1212,12 @@ export class WorkflowExecute {
 					nodeType instanceof Node
 						? await nodeType.execute(context)
 						: await nodeType.execute.call(context);
+			} else {
+				throw new Error();
+			}
+
+			if (data && !Array.isArray(data)) {
+				return data;
 			}
 
 			if (Container.get(GlobalConfig).sentry.backendDsn) {
@@ -1589,6 +1597,29 @@ export class WorkflowExecute {
 									this.abortController.signal,
 								);
 
+								if ('actions' in runNodeData) {
+									for (const action of runNodeData.actions) {
+										const node = workflow.getNode(action.nodeName);
+										const connections =
+											workflow.connectionsBySourceNode[action.nodeName][executionNode.name][0];
+
+										if (node && connections) {
+											this.addNodeToBeExecuted(
+												workflow,
+												connections[0],
+												0,
+												executionNode.name,
+												// TODO: fix this
+												// nodeSuccessData,
+												[],
+												runIndex,
+											);
+										}
+									}
+
+									continue executionLoop;
+								}
+
 								nodeSuccessData = runNodeData.data;
 
 								let didContinueOnFail = nodeSuccessData?.[0]?.[0]?.json?.error !== undefined;
@@ -1605,6 +1636,29 @@ export class WorkflowExecute {
 										this.mode,
 										this.abortController.signal,
 									);
+
+									if ('actions' in runNodeData) {
+										for (const action of runNodeData.actions) {
+											const node = workflow.getNode(action.nodeName);
+											const connections =
+												workflow.connectionsBySourceNode[action.nodeName][executionNode.name][0];
+
+											if (node && connections) {
+												this.addNodeToBeExecuted(
+													workflow,
+													connections[0],
+													0,
+													executionNode.name,
+													// TODO: fix this
+													// nodeSuccessData,
+													[],
+													runIndex,
+												);
+											}
+										}
+
+										continue executionLoop;
+									}
 
 									nodeSuccessData = runNodeData.data;
 									didContinueOnFail = nodeSuccessData?.[0]?.[0]?.json?.error !== undefined;

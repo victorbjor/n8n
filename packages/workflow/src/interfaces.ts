@@ -1678,9 +1678,10 @@ export interface INodeType {
  * This class serves as the base for all nodes using the new context API
  * having this as a class enables us to identify these instances at runtime
  */
+export type Foo = { actions: [{ nodeName: string; input: string | Record<string, unknown> }] };
 export abstract class Node {
 	abstract description: INodeTypeDescription;
-	execute?(context: IExecuteFunctions): Promise<INodeExecutionData[][]>;
+	execute?(context: IExecuteFunctions): Promise<INodeExecutionData[][] | Foo>;
 	webhook?(context: IWebhookFunctions): Promise<IWebhookResponseData>;
 	poll?(context: IPollFunctions): Promise<INodeExecutionData[][] | null>;
 }
