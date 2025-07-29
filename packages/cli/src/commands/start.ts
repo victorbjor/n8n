@@ -33,6 +33,7 @@ import { ExecutionsPruningService } from '@/services/pruning/executions-pruning.
 import { UrlService } from '@/services/url.service';
 import { WaitTracker } from '@/wait-tracker';
 import { WorkflowRunner } from '@/workflow-runner';
+import { LegacySqliteExecutionRecoveryService } from '@/executions/legacy-sqlite-execution-recovery.service';
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const open = require('open');
@@ -50,10 +51,6 @@ const flagsSchema = z.object({
 		.describe(
 			'Attempts to self heal n8n if packages with nodes are missing. Might drastically increase startup times.',
 		)
-		.optional(),
-	cleanDanglingExecutions: z
-		.boolean()
-		.describe('Removes dangling executions that are queued and are missing execution data.')
 		.optional(),
 });
 
@@ -319,8 +316,7 @@ export class Start extends BaseCommand<z.infer<typeof flagsSchema>> {
 			);
 		}
 
-		const eventBus = Container.get(MessageEventBus);
-		eventBus.cleanDanglingExecutions = flags.cleanDanglingExecutions ?? false;
+		await Container.get(LegacySqliteExecutionRecoveryService).cleanupWorkflowExecutions();
 
 		await this.server.start();
 
