@@ -1110,7 +1110,7 @@ export class WorkflowExecute {
 	private prepareConnectionInputData(
 		workflow: Workflow,
 		nodeType: INodeType,
-		customOperation: any,
+		customOperation: ReturnType<WorkflowExecute['getCustomOperation']>,
 		inputData: ITaskDataConnections,
 	): INodeExecutionData[] | null {
 		if (
@@ -1196,7 +1196,7 @@ export class WorkflowExecute {
 		workflow: Workflow,
 		node: INode,
 		nodeType: INodeType,
-		customOperation: any,
+		customOperation: ReturnType<WorkflowExecute['getCustomOperation']>,
 		additionalData: IWorkflowExecuteAdditionalData,
 		mode: WorkflowExecuteMode,
 		runExecutionData: IRunExecutionData,
