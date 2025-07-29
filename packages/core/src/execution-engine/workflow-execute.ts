@@ -1317,7 +1317,7 @@ export class WorkflowExecute {
 	private async executeTriggerNode(
 		workflow: Workflow,
 		node: INode,
-		nodeType: INodeType,
+		_nodeType: INodeType,
 		additionalData: IWorkflowExecuteAdditionalData,
 		mode: WorkflowExecuteMode,
 		inputData: ITaskDataConnections,
