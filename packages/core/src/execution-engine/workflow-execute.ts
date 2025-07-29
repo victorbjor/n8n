@@ -1565,12 +1565,6 @@ export class WorkflowExecute {
 		this.validateWorkflowReadiness(workflow);
 		this.assertExecutionDataExists(this.runExecutionData.executionData, workflow);
 
-		// Variables which hold temporary data for each node-execution
-		let executionData: IExecuteData;
-		let executionError: ExecutionBaseError | undefined;
-		let executionNode: INode;
-		let runIndex: number;
-
 		if (this.runExecutionData.waitTill) {
 			const lastNodeExecuted = this.runExecutionData.resultData.lastNodeExecuted as string;
 			this.runExecutionData.executionData.nodeExecutionStack[0].node.disabled = true;
@@ -1578,6 +1572,11 @@ export class WorkflowExecute {
 			this.runExecutionData.resultData.runData[lastNodeExecuted].pop();
 		}
 
+		// Variables which hold temporary data for each node-execution
+		let executionData: IExecuteData;
+		let executionError: ExecutionBaseError | undefined;
+		let executionNode: INode;
+		let runIndex: number;
 		let currentExecutionTry = '';
 		let lastExecutionTry = '';
 		let closeFunction: Promise<void> | undefined;
