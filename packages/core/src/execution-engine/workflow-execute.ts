@@ -1498,20 +1498,17 @@ export class WorkflowExecute {
 		}
 	}
 
-	private setupExecution(workflow: Workflow): {
+	private setupExecution(): {
 		startedAt: Date;
 		hooks: ExecutionLifecycleHooks;
-		executionId: string | undefined;
 	} {
-		Logger.debug('Workflow execution started', { workflowId: workflow.id });
-
 		const startedAt = new Date();
 		this.status = 'running';
 
-		const { hooks, executionId } = this.additionalData;
+		const { hooks } = this.additionalData;
 		assert.ok(hooks, 'Failed to run workflow due to missing execution lifecycle hooks');
 
-		return { startedAt, hooks, executionId };
+		return { startedAt, hooks };
 	}
 
 	private validateWorkflowReadiness(workflow: Workflow): void {
@@ -1538,6 +1535,22 @@ export class WorkflowExecute {
 		}
 	}
 
+	private assertExecutionDataExists(
+		this: WorkflowExecute,
+		executionData: IRunExecutionData['executionData'],
+		workflow: Workflow,
+	): asserts executionData is NonNullable<IRunExecutionData['executionData']> {
+		if (!executionData) {
+			throw new UnexpectedError('Failed to run workflow due to missing execution data', {
+				extra: {
+					workflowId: workflow.id,
+					executionId: this.additionalData.executionId,
+					mode: this.mode,
+				},
+			});
+		}
+	}
+
 	/**
 	 * Runs the given execution data.
 	 *
@@ -1547,24 +1560,16 @@ export class WorkflowExecute {
 	//            active executions anymore
 	// eslint-disable-next-line @typescript-eslint/promise-function-async
 	processRunExecutionData(workflow: Workflow): PCancelable<IRun> {
-		const { startedAt, hooks, executionId } = this.setupExecution(workflow);
+		Logger.debug('Workflow execution started', { workflowId: workflow.id });
+		const { startedAt, hooks } = this.setupExecution();
 		this.validateWorkflowReadiness(workflow);
+		this.assertExecutionDataExists(this.runExecutionData.executionData, workflow);
 
 		// Variables which hold temporary data for each node-execution
 		let executionData: IExecuteData;
 		let executionError: ExecutionBaseError | undefined;
 		let executionNode: INode;
 		let runIndex: number;
-
-		if (!this.runExecutionData.executionData) {
-			throw new ApplicationError('Failed to run workflow due to missing execution data', {
-				extra: {
-					workflowId: workflow.id,
-					executionId,
-					mode: this.mode,
-				},
-			});
-		}
 
 		if (this.runExecutionData.waitTill) {
 			const lastNodeExecuted = this.runExecutionData.resultData.lastNodeExecuted as string;
