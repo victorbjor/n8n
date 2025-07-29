@@ -1551,6 +1551,16 @@ export class WorkflowExecute {
 		}
 	}
 
+	private handleWaitingState(workflow: Workflow) {
+		if (this.runExecutionData.waitTill) {
+			this.assertExecutionDataExists(this.runExecutionData.executionData, workflow);
+			const lastNodeExecuted = this.runExecutionData.resultData.lastNodeExecuted as string;
+			this.runExecutionData.executionData.nodeExecutionStack[0].node.disabled = true;
+			this.runExecutionData.waitTill = undefined;
+			this.runExecutionData.resultData.runData[lastNodeExecuted].pop();
+		}
+	}
+
 	/**
 	 * Runs the given execution data.
 	 *
@@ -1564,13 +1574,7 @@ export class WorkflowExecute {
 		const { startedAt, hooks } = this.setupExecution();
 		this.validateWorkflowReadiness(workflow);
 		this.assertExecutionDataExists(this.runExecutionData.executionData, workflow);
-
-		if (this.runExecutionData.waitTill) {
-			const lastNodeExecuted = this.runExecutionData.resultData.lastNodeExecuted as string;
-			this.runExecutionData.executionData.nodeExecutionStack[0].node.disabled = true;
-			this.runExecutionData.waitTill = undefined;
-			this.runExecutionData.resultData.runData[lastNodeExecuted].pop();
-		}
+		this.handleWaitingState(workflow);
 
 		// Variables which hold temporary data for each node-execution
 		let executionData: IExecuteData;
