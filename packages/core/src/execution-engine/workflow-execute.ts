@@ -65,6 +65,7 @@ import { WorkflowHasIssuesError } from '@/errors/workflow-has-issues.error';
 import * as NodeExecuteFunctions from '@/node-execute-functions';
 import { isJsonCompatible } from '@/utils/is-json-compatible';
 
+import type { ExecutionLifecycleHooks } from './execution-lifecycle-hooks';
 import { ExecuteContext, PollContext } from './node-execution-context';
 import {
 	DirectedGraph,
@@ -1497,37 +1498,24 @@ export class WorkflowExecute {
 		}
 	}
 
-	/**
-	 * Runs the given execution data.
-	 *
-	 */
-	// IMPORTANT: Do not add "async" to this function, it will then convert the
-	//            PCancelable to a regular Promise and does so not allow canceling
-	//            active executions anymore
-	// eslint-disable-next-line @typescript-eslint/promise-function-async
-	processRunExecutionData(workflow: Workflow): PCancelable<IRun> {
+	private setupExecution(workflow: Workflow): {
+		startedAt: Date;
+		hooks: ExecutionLifecycleHooks;
+		executionId: string | undefined;
+	} {
 		Logger.debug('Workflow execution started', { workflowId: workflow.id });
 
 		const startedAt = new Date();
-		const forceInputNodeExecution = this.forceInputNodeExecution(workflow);
-
 		this.status = 'running';
 
 		const { hooks, executionId } = this.additionalData;
 		assert.ok(hooks, 'Failed to run workflow due to missing execution lifecycle hooks');
 
-		if (!this.runExecutionData.executionData) {
-			throw new ApplicationError('Failed to run workflow due to missing execution data', {
-				extra: {
-					workflowId: workflow.id,
-					executionId,
-					mode: this.mode,
-				},
-			});
-		}
+		return { startedAt, hooks, executionId };
+	}
 
-		/** Node execution stack will be empty for an execution containing only Chat Trigger. */
-		const startNode = this.runExecutionData.executionData.nodeExecutionStack.at(0)?.node.name;
+	private validateWorkflowReadiness(workflow: Workflow): void {
+		const startNode = this.runExecutionData.executionData!.nodeExecutionStack.at(0)?.node.name;
 
 		let destinationNode: string | undefined;
 		if (this.runExecutionData.startData && this.runExecutionData.startData.destinationNode) {
@@ -1545,14 +1533,37 @@ export class WorkflowExecute {
 			throw new WorkflowHasIssuesError();
 		}
 
+		if (this.runExecutionData.startData === undefined) {
+			this.runExecutionData.startData = {};
+		}
+	}
+
+	/**
+	 * Runs the given execution data.
+	 *
+	 */
+	// IMPORTANT: Do not add "async" to this function, it will then convert the
+	//            PCancelable to a regular Promise and does so not allow canceling
+	//            active executions anymore
+	// eslint-disable-next-line @typescript-eslint/promise-function-async
+	processRunExecutionData(workflow: Workflow): PCancelable<IRun> {
+		const { startedAt, hooks, executionId } = this.setupExecution(workflow);
+		this.validateWorkflowReadiness(workflow);
+
 		// Variables which hold temporary data for each node-execution
 		let executionData: IExecuteData;
 		let executionError: ExecutionBaseError | undefined;
 		let executionNode: INode;
 		let runIndex: number;
 
-		if (this.runExecutionData.startData === undefined) {
-			this.runExecutionData.startData = {};
+		if (!this.runExecutionData.executionData) {
+			throw new ApplicationError('Failed to run workflow due to missing execution data', {
+				extra: {
+					workflowId: workflow.id,
+					executionId,
+					mode: this.mode,
+				},
+			});
 		}
 
 		if (this.runExecutionData.waitTill) {
@@ -2084,7 +2095,7 @@ export class WorkflowExecute {
 									if (
 										nodeSuccessData![outputIndex] &&
 										(nodeSuccessData![outputIndex].length !== 0 ||
-											(connectionData.index > 0 && forceInputNodeExecution))
+											(connectionData.index > 0 && this.forceInputNodeExecution(workflow)))
 									) {
 										// Add the node only if it did execute or if connected to second "optional" input
 										if (workflow.settings.executionOrder === 'v1') {
