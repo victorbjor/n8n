@@ -1101,7 +1101,6 @@ export class WorkflowExecute {
 		mode: WorkflowExecuteMode,
 		abortSignal?: AbortSignal,
 	): Promise<IRunNodeResponse | Foo> {
-		debugger;
 		const { node } = executionData;
 		let inputData = executionData.data;
 
