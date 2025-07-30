@@ -1775,6 +1775,22 @@ export class WorkflowExecute {
 									this.abortController.signal,
 								);
 
+								// Support waiting in tools
+								//
+								// if runNodeData is Foo
+								// 1. stop executing current node and put it as paused on the stack
+								//	- do any clean up of execution variables
+								// 2. put actions nodes on the stack
+								// 3. continue executionLoop
+								// 4. when hitting the paused node again, restore the state and call the execute method on the paused node again
+								//
+								// Notes:
+								// - only nodes that have a continue method can return a Foo
+								//
+								// Todos:
+								// - figure out how to recreate the stack after a tool waited and the execution was persisted to the database
+
+								// if runNodeData is Foo
 								if ('actions' in runNodeData) {
 									for (const action of runNodeData.actions) {
 										const node = workflow.getNode(action.nodeName);
@@ -1782,6 +1798,7 @@ export class WorkflowExecute {
 											workflow.connectionsBySourceNode[action.nodeName][executionNode.name][0];
 
 										if (node && connections) {
+											// 2. put actions nodes on the stack
 											this.addNodeToBeExecuted(
 												workflow,
 												connections[0],
@@ -1795,6 +1812,7 @@ export class WorkflowExecute {
 										}
 									}
 
+									// 3. continue executionLoop
 									continue executionLoop;
 								}
 
