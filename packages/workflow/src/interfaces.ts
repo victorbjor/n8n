@@ -1678,7 +1678,13 @@ export interface INodeType {
  * This class serves as the base for all nodes using the new context API
  * having this as a class enables us to identify these instances at runtime
  */
-export type Foo = { actions: [{ nodeName: string; input: string | Record<string, unknown> }] };
+export type Foo = {
+	actions: Array<{
+		nodeName: string;
+		input: string | Record<string, unknown>;
+		id: string;
+	}>;
+};
 export abstract class Node {
 	abstract description: INodeTypeDescription;
 	execute?(context: IExecuteFunctions): Promise<INodeExecutionData[][] | Foo>;
