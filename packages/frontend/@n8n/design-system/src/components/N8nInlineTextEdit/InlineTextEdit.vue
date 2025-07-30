@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useElementSize } from '@vueuse/core';
 import { EditableArea, EditableInput, EditablePreview, EditableRoot } from 'reka-ui';
-import { computed, useTemplateRef } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 
 type Props = {
 	modelValue: string;
@@ -28,8 +28,11 @@ const emit = defineEmits<{
 const editableRoot = useTemplateRef('editableRoot');
 const measureSpan = useTemplateRef('measureSpan');
 
+// Track current input value for resizing
+const currentInputValue = ref(props.modelValue);
+
 // Content for width calculation
-const displayContent = computed(() => props.modelValue || props.placeholder);
+const displayContent = computed(() => currentInputValue.value || props.placeholder);
 
 // Resize logic
 const { width: measuredWidth } = useElementSize(measureSpan);
@@ -56,9 +59,19 @@ function forceCancel() {
 }
 
 function onSubmit(value: string | null | undefined) {
-	const trimmed = (value || '').trim();
+	const trimmed = (value ?? '').trim();
 	if (trimmed && trimmed !== props.modelValue) {
 		emit('update:model-value', trimmed);
+	}
+}
+
+function onInput(value: string) {
+	currentInputValue.value = value;
+}
+
+function onStateChange(state: string) {
+	if (state === 'edit' || state === 'cancel') {
+		currentInputValue.value = props.modelValue;
 	}
 }
 
@@ -80,6 +93,8 @@ defineExpose({ forceFocus, forceCancel });
 		auto-resize
 		@click="forceFocus"
 		@submit="onSubmit"
+		@update:model-value="onInput"
+		@update:state="onStateChange"
 	>
 		<EditableArea
 			:style="computedInlineStyles"
@@ -99,6 +114,7 @@ defineExpose({ forceFocus, forceCancel });
 				:class="$style.inlineRenameInput"
 				data-test-id="inline-edit-input"
 				:style="computedInlineStyles"
+				@input="onInput($event.target.value)"
 			/>
 		</EditableArea>
 	</EditableRoot>
